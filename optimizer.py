@@ -38,23 +38,48 @@ class AdamW(Optimizer):
                 if grad.is_sparse:
                     raise RuntimeError("Adam does not support sparse gradients, please consider SparseAdam instead")
 
-                raise NotImplementedError()
 
                 # State should be stored in this dictionary
                 state = self.state[p]
 
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
+                beta1, beta2 = group['betas']
+                eps = group['eps']
+                weight_decay = group['weight_decay']
+                correct_bias = group['correct_bias']
 
                 # Update first and second moments of the gradients
+                if len(state) == 0:
+                    state['step'] = 0
+                    state['exp_avg'] = torch.zeros(size=p.shape)
+                    state['exp_avg_sq'] = torch.zeros(size=p.shape)
+
+                previous_mt = state['exp_avg']
+                previous_vt = state['exp_avg_sq']
+
+                state['step'] += 1
+                t = state['step']
+                mt = beta1 * previous_mt + (1 - beta1) * grad
+                vt = beta2 * previous_vt + (1 - beta2) * (grad * grad)
+                state['exp_avg'] = mt
+                state['exp_avg_sq'] = vt
 
                 # Bias correction
                 # Please note that we are using the "efficient version" given in
                 # https://arxiv.org/abs/1412.6980
+                original_alpha = alpha # To record the alpha before bias correction, which could potentially change alpha to alpha_t
+                if correct_bias:
+                    numerator = pow((1 - pow(beta2, t)), 1/2)
+                    denominator = (1 - pow(beta1, t))
+                    alpha = alpha *  numerator / denominator
+                    eps = numerator * eps # eps_hat as in in Kigma & Ba (2014)
 
                 # Update parameters
+                p.data = p.data - alpha * mt / (torch.sqrt(vt) + eps)
 
                 # Add weight decay after the main gradient-based updates.
                 # Please note that the learning rate should be incorporated into this update.
+                p.data = p.data - original_alpha * weight_decay
 
         return loss
