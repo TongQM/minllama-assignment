@@ -60,16 +60,31 @@ def apply_rotary_emb(
     key_real, key_imag = key.float().reshape(key.shape[:-1] + (-1, 2)).unbind(-1)
     # This separates each query/key vector into its odd and even indices (assuming *one-indexing*).
     # query_real contains q_1, q_3, q_5, ... and query_imag contains q_2, q_4, q_6, ...
+    half_d = query_real.shape[-1]
+    index_vec = torch.arange(half_d)
+    theta_vec = torch.pow(theta, -index_vec / half_d)
+    seq_vec = torch.arange(seqlen)
 
-    # First, compute the trigonometric values in the second and fourth columns in
-    # slide 22 (linked above).
+    q_real1 = query_real * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    q_real2 = query_real * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    query_real = torch.stack((q_real1, q_real2), dim=4).flatten(start_dim=3)
+    
+    q_imag1 = -query_imag * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    q_imag2 = query_imag * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    query_imag = torch.stack((q_imag1, q_imag2), dim=4).flatten(start_dim=3)
+
+    k_real1 = key_real * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    k_real2 = key_real * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    key_real = torch.stack((k_real1, k_real2), dim=4).flatten(start_dim=3)
+
+    k_imag1 = -key_imag * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    k_imag2 = key_imag * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    key_imag = torch.stack((k_imag1, k_imag2), dim=4).flatten(start_dim=3)
 
     # Then, combine these trigonometric values with the tensors query_real, query_imag,
     # key_real, and key_imag.
 
-    raise NotImplementedError
-
-    query_out = None
-    key_out = None
+    query_out = query_real + query_imag
+    key_out = key_real + key_imag
     # Return the rotary position embeddings for the query and key tensors
     return query_out, key_out

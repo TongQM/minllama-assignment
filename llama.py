@@ -46,7 +46,7 @@ class RMSNorm(torch.nn.Module):
         # todo
         n = x.shape[1]
         RMSa = torch.sqrt(torch.sum(torch.square(x), dim=1) / n + self.eps)
-        x_bar = (x * self.weight[:, None]) / RMSa[:, None]
+        x_bar = x / RMSa[:, None] # Learnable scaler included in the forward function
         return x_bar
         
 
@@ -62,6 +62,7 @@ class RMSNorm(torch.nn.Module):
 
         """
         output = self._norm(x.float()).type_as(x)
+        print(f"output is {output}, weight is {self.weights}")
         return output * self.weight
 
 class Attention(nn.Module):
