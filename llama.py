@@ -305,6 +305,9 @@ class Llama(LlamaPreTrainedModel):
                 scaled_logits = logits / temperature
                 probabilities = torch.softmax(scaled_logits, dim=1)
                 idx_next = torch.multinomial(probabilities, num_samples=1)
+
+            if len(idx_next.shape) == 1:
+                idx_next = idx_next[:, None] # Expand the idx_next's dimension for concatenation
             # append sampled index to the running sequence and continue
             idx = torch.cat((idx, idx_next), dim=1)
 
