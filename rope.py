@@ -65,20 +65,23 @@ def apply_rotary_emb(
     theta_vec = torch.pow(theta, -index_vec / half_d)
     seq_vec = torch.arange(seqlen)
 
-    q_real1 = query_real * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
-    q_real2 = query_real * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    cos_vals = torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    sin_vals = torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+
+    q_real1 = query_real * cos_vals
+    q_real2 = query_real * sin_vals
     query_real = torch.stack((q_real1, q_real2), dim=4).flatten(start_dim=3)
     
-    q_imag1 = -query_imag * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
-    q_imag2 = query_imag * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    q_imag1 = -query_imag * sin_vals
+    q_imag2 = query_imag * cos_vals
     query_imag = torch.stack((q_imag1, q_imag2), dim=4).flatten(start_dim=3)
 
-    k_real1 = key_real * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
-    k_real2 = key_real * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    k_real1 = key_real * cos_vals
+    k_real2 = key_real * sin_vals
     key_real = torch.stack((k_real1, k_real2), dim=4).flatten(start_dim=3)
 
-    k_imag1 = -key_imag * torch.sin(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
-    k_imag2 = key_imag * torch.cos(seq_vec[None, :, None, None] * theta_vec[None, None, None, :])
+    k_imag1 = -key_imag * sin_vals
+    k_imag2 = key_imag * cos_vals
     key_imag = torch.stack((k_imag1, k_imag2), dim=4).flatten(start_dim=3)
 
     # Then, combine these trigonometric values with the tensors query_real, query_imag,
